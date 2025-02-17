@@ -1,4 +1,4 @@
-# E621 Downloader
+# PawLoad
 
 A desktop application built with PyQt6 that allows users to download images from e621.net using their API.
 
