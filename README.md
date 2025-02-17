@@ -1,31 +1,31 @@
-# PawLoad
+# e621-downloader
 
-A desktop application built with PyQt6 that allows users to download images from e621.net using their API.
+A desktop application built with PyQt6 that allows you to download images from e621.net using tags.
 
 ## Features
 
 - User-friendly GUI interface
-- Secure API key authentication
-- Custom tag-based search
-- Configurable download limits
-- Save directory selection
-- Progress tracking
-- Remember me functionality
-- Graceful error handling
-- Download interruption support
+- Tag-based search and download  
+- Customizable download limits
+- Save and remember user preferences
+- Progress tracking for downloads
+- SSL supported secure connections
+- Rate limit handling
+- Automatic file naming with artist attribution
 
 ## Requirements
 
-- Python 3.6+
+- Python 3.8+
 - PyQt6
 - aiohttp
-- asyncio
+- ssl
+- base64
 
 ## Installation
 
-1. Clone this repository:
+1. Clone the repository:
 ```bash
-git clone https://github.com/nyabi021/PawLoad.git
+git clone https://github.com/nyabi021/e621-downloader.git
 cd e621-downloader
 ```
 
@@ -38,83 +38,38 @@ pip install -r requirements.txt
 
 1. Run the application:
 ```bash
-python main.py
+python src/main.py
 ```
 
-2. Enter your e621.net credentials:
-   - Username
-   - API Key (Can be found in your e621.net account settings)
-
-3. Configure download settings:
-   - Enter tags to search for
-   - Set maximum number of images to download (default: 320)
-   - Select save directory
-   - Optional: Check "Remember Me" to save your settings
-
-4. Click "Start Download" to begin downloading
-
-## Building from Source
-
-To create a standalone executable:
-
-1. Install PyInstaller:
-```bash
-pip install pyinstaller
-```
-
-2. Build the executable:
-```bash
-pyinstaller --name="PawLoad" --icon=icon.ico --windowed --onefile main.py
-```
-
-The executable will be created in the `dist` directory.
+2. Enter your e621.net credentials (username and API key)
+3. Input your desired tags for searching
+4. Set the maximum number of images to download
+5. Choose a save directory
+6. Click "Start Download" to begin
 
 ## Configuration
 
-The application saves settings in the following locations:
-- Windows: `%APPDATA%\E621Downloader\Settings`
-- Linux: `~/.config/E621Downloader/Settings`
-- macOS: `~/Library/Preferences/E621Downloader/Settings`
+- **Remember Me**: Option to save your credentials and preferences locally
+- **Maximum Images**: Customize how many images to download (1-10000)
+- **Save Directory**: Choose where to save downloaded images
+- **Tags**: Space-separated tags for searching images
 
-## Features in Detail
+## Build
 
-### Authentication
-- Secure login using username and API key
-- Option to save credentials locally
-
-### Download Management
-- Concurrent downloads using asyncio
-- Progress tracking for each download
-- Ability to stop downloads in progress
-- Automatic skipping of existing files
-
-### Search Options
-- Support for complex tag combinations
-- Configurable download limits
-- Custom save directory selection
-
-## Security
-
-- Credentials are stored securely using the system's keychain
-- SSL verification for all API requests
-- No plaintext password storage
+To create an executable:
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --icon=assets/icon.ico src/main.py
+```
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is released under the MIT License. See the `LICENSE` file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Disclaimer
 
-This software is not affiliated with e621.net. Please be respectful of the site's API rate limits and terms of service.
-
-## Support
-
-For support, please open an issue in the GitHub repository.
+This tool is intended for educational purposes only. Users are responsible for complying with e621.net's terms of service and API usage guidelines.

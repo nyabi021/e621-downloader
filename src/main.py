@@ -33,26 +33,16 @@ class DownloaderThread(QThread):
             ssl_context = ssl.create_default_context()
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
-
             timeout = aiohttp.ClientTimeout(total=30)
-
             username = self.settings_dict['credentials']['username']
             api_key = self.settings_dict['credentials']['api_key']
-            
             headers = {
-                'User-Agent': 'PawLoad/1.0 (by {})'.format(username),
+                'User-Agent': f'e621-downloader/v1.0.0 (by {username})',
                 'Authorization': f'Basic {self.encode_credentials(username, api_key)}'
             }
-            
             connector = aiohttp.TCPConnector(ssl=ssl_context)
-            async with aiohttp.ClientSession(
-                headers=headers, 
-                connector=connector,
-                timeout=timeout
-            ) as session:
-                self.progress_signal.emit(
-                    f"Attempting to login as {self.settings_dict['credentials']['username']}"
-                )
+            async with aiohttp.ClientSession(headers=headers, connector=connector, timeout=timeout) as session:
+                self.progress_signal.emit(f"Attempting to login as {username}")
                 try:
                     async with session.get('https://e621.net/posts.json?limit=1') as response:
                         if response.status == 200:
@@ -77,78 +67,79 @@ class DownloaderThread(QThread):
         try:
             if not await self.login():
                 return
-
-            headers = {
-                'User-Agent': 'PawLoad/1.0'
-            }
+            headers = {'User-Agent': 'e621-downloader/v1.0.0'}
             auth = aiohttp.BasicAuth(
                 login=self.settings_dict['credentials']['username'],
                 password=self.settings_dict['credentials']['api_key']
             )
-
             async with aiohttp.ClientSession(auth=auth, headers=headers) as session:
                 self.session = session
                 tags = self.settings_dict['download']['tags']
-                limit = self.settings_dict['download']['limit']
+                total_limit = self.settings_dict['download']['limit']
                 save_dir = self.settings_dict['download']['save_directory']
-
                 os.makedirs(save_dir, exist_ok=True)
-
-                self.progress_signal.emit(f"Fetching posts with tags: {tags}")
-                async with session.get(
-                    'https://e621.net/posts.json',
-                    params={'tags': tags, 'limit': limit}
-                ) as response:
-                    if response.status != 200:
-                        self.error_signal.emit(f"API Error: {response.status}")
-                        return
-                    
-                    data = await response.json()
-                    posts = data.get('posts', [])
-                    
-                    if not posts:
-                        self.progress_signal.emit("No posts found with given tags")
-                        return
-
-                    self.progress_signal.emit(f"Found {len(posts)} posts")
-                    
-                    for i, post in enumerate(posts):
-                        if not self.running:
-                            self.progress_signal.emit("\nDownload interrupted by user.")
-                            return
-
-                        url = post.get('file', {}).get('url')
-                        if not url:
-                            continue
-
-                        post_id = post.get('id', 'unknown')
-                        artists = post.get('tags', {}).get('artist', ['unknown'])
-                        artist = artists[0] if artists else 'unknown'
-                        ext = url.split('.')[-1]
-
-                        filename = f"{artist}_{post_id}.{ext}"
-                        filepath = os.path.join(save_dir, filename)
-
-                        if os.path.exists(filepath):
-                            self.progress_signal.emit(f"Skipping {filename} (already exists)")
-                            continue
-
-                        self.progress_signal.emit(f"Downloading {filename}")
-                        try:
-                            async with session.get(url) as img_response:
-                                if img_response.status == 200:
-                                    with open(filepath, 'wb') as f:
-                                        f.write(await img_response.read())
-                                    self.progress_signal.emit(f"Successfully downloaded {filename}")
-                                else:
-                                    self.progress_signal.emit(f"Failed to download {filename}")
-                        except Exception as e:
-                            self.progress_signal.emit(f"Error downloading {filename}: {str(e)}")
-
+                self.progress_signal.emit(f"Fetching up to {total_limit} posts with tags: {tags}")
+                downloaded_count = 0
+                current_page = 1
+                while downloaded_count < total_limit:
+                    remaining = total_limit - downloaded_count
+                    batch_limit = min(remaining, 320)
+                    params = {'tags': tags, 'limit': batch_limit, 'page': current_page}
+                    if current_page > 1:
                         await asyncio.sleep(1)
-
-            self.download_complete.emit()
-
+                    self.progress_signal.emit(f"Requesting page {current_page} with limit={batch_limit}...")
+                    async with session.get('https://e621.net/posts.json', params=params) as response:
+                        if response.status == 503:
+                            self.error_signal.emit("Got 503 (rate limited). Please slow down or wait before trying again.")
+                            return
+                        elif response.status != 200:
+                            self.error_signal.emit(f"API Error: {response.status}")
+                            return
+                        data = await response.json()
+                        posts = data.get('posts', [])
+                        if not posts:
+                            self.progress_signal.emit("No more posts found.")
+                            break
+                        self.progress_signal.emit(f"Page {current_page} returned {len(posts)} posts.")
+                        for post in posts:
+                            if not self.running:
+                                self.progress_signal.emit("\nDownload interrupted by user.")
+                                return
+                            file_info = post.get('file', {})
+                            url = file_info.get('url')
+                            if not url:
+                                continue
+                            post_id = post.get('id', 'unknown')
+                            artists = post.get('tags', {}).get('artist', ['unknown'])
+                            artist = artists[0] if artists else 'unknown'
+                            ext = url.split('.')[-1]
+                            filename = f"{artist}_{post_id}.{ext}"
+                            filepath = os.path.join(save_dir, filename)
+                            if os.path.exists(filepath):
+                                self.progress_signal.emit(f"Skipping {filename} (already exists)")
+                                continue
+                            self.progress_signal.emit(f"Downloading {filename}...")
+                            try:
+                                async with session.get(url) as img_response:
+                                    if img_response.status == 503:
+                                        self.error_signal.emit("Got 503 (rate limited) during file download. Stopping.")
+                                        return
+                                    elif img_response.status == 200:
+                                        with open(filepath, 'wb') as f:
+                                            f.write(await img_response.read())
+                                        downloaded_count += 1
+                                        self.progress_signal.emit(f"Successfully downloaded {filename} ({downloaded_count}/{total_limit})")
+                                    else:
+                                        self.progress_signal.emit(f"Failed to download {filename}: HTTP {img_response.status}")
+                            except Exception as e:
+                                self.progress_signal.emit(f"Error downloading {filename}: {str(e)}")
+                            if self.running:
+                                await asyncio.sleep(1)
+                            if downloaded_count >= total_limit:
+                                break
+                        current_page += 1
+                self.progress_signal.emit(f"\nTotal downloaded: {downloaded_count}")
+                self.download_complete.emit()
         except Exception as e:
             self.error_signal.emit(f"Error during download: {str(e)}")
 
@@ -161,11 +152,9 @@ class DownloaderThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PawLoad")
+        self.setWindowTitle("e621-downloader v1.0.0")
         self.setMinimumSize(600, 400)
-        
-        self.settings = QSettings('PawLoad', 'Settings')
-        
+        self.settings = QSettings('e621-downloader', 'Settings')
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #f5f5f5;
@@ -216,25 +205,19 @@ class MainWindow(QMainWindow):
                 padding: 8px;
             }
         """)
-        
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         layout = QVBoxLayout(main_widget)
         layout.setSpacing(15)
         layout.setContentsMargins(20, 20, 20, 20)
-        
         input_layout = QVBoxLayout()
         input_layout.setSpacing(10)
-        
-        # Username section
         username_layout = QVBoxLayout()
         username_label = QLabel("Username")
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("Enter your username")
         username_layout.addWidget(username_label)
         username_layout.addWidget(self.username_input)
-        
-        # API Key section
         apikey_layout = QVBoxLayout()
         apikey_label = QLabel("API Key")
         self.apikey_input = QLineEdit()
@@ -242,18 +225,13 @@ class MainWindow(QMainWindow):
         self.apikey_input.setEchoMode(QLineEdit.EchoMode.Password)
         apikey_layout.addWidget(apikey_label)
         apikey_layout.addWidget(self.apikey_input)
-        
         self.remember_me = QCheckBox("Remember Me")
-        
-        # Tags section
         tags_layout = QVBoxLayout()
         tags_label = QLabel("Tags")
         self.tags_input = QLineEdit()
         self.tags_input.setPlaceholderText("Enter tags (space separated)")
         tags_layout.addWidget(tags_label)
         tags_layout.addWidget(self.tags_input)
-
-        # Limit section
         limit_layout = QVBoxLayout()
         limit_label = QLabel("Maximum Images")
         self.limit_input = QLineEdit()
@@ -262,8 +240,6 @@ class MainWindow(QMainWindow):
         self.limit_input.setValidator(QIntValidator(1, 10000))
         limit_layout.addWidget(limit_label)
         limit_layout.addWidget(self.limit_input)
-        
-        # Directory section
         dir_layout = QVBoxLayout()
         dir_label = QLabel("Save Directory")
         dir_input_layout = QHBoxLayout()
@@ -284,48 +260,34 @@ class MainWindow(QMainWindow):
         dir_input_layout.addWidget(self.dir_button)
         dir_layout.addWidget(dir_label)
         dir_layout.addLayout(dir_input_layout)
-        
-        # Assemble input layout
         input_layout.addLayout(username_layout)
         input_layout.addLayout(apikey_layout)
         input_layout.addWidget(self.remember_me)
         input_layout.addLayout(tags_layout)
         input_layout.addLayout(limit_layout)
         input_layout.addLayout(dir_layout)
-        
         layout.addLayout(input_layout)
-        
-        # Progress display
         self.progress_display = QTextEdit()
         self.progress_display.setReadOnly(True)
         self.progress_display.setMinimumHeight(150)
         layout.addWidget(self.progress_display)
-        
-        # Buttons layout
         button_layout = QHBoxLayout()
         self.download_button = QPushButton("Start Download")
         self.stop_button = QPushButton("Stop Download")
         self.stop_button.setObjectName("stopButton")
         self.stop_button.setEnabled(False)
-        
         self.download_button.clicked.connect(self.start_download)
         self.stop_button.clicked.connect(self.stop_download)
-        
         button_layout.addStretch()
         button_layout.addWidget(self.download_button)
         button_layout.addWidget(self.stop_button)
-        
         layout.addLayout(button_layout)
-        
-        # Load previous settings if any
         self.load_settings()
-        
         self.download_thread = None
 
     def load_settings(self):
         remember_me = self.settings.value('remember_me', False, type=bool)
         self.remember_me.setChecked(remember_me)
-        
         if remember_me:
             self.username_input.setText(self.settings.value('username', ''))
             self.apikey_input.setText(self.settings.value('api_key', ''))
@@ -338,14 +300,12 @@ class MainWindow(QMainWindow):
             self.settings.remove('tags')
             self.settings.remove('save_directory')
             self.settings.remove('limit')
-            
             self.dir_input.setText(str(Path.home() / 'Downloads'))
             self.limit_input.setText('320')
 
     def save_settings(self):
         remember_me = self.remember_me.isChecked()
         self.settings.setValue('remember_me', remember_me)
-        
         if remember_me:
             self.settings.setValue('username', self.username_input.text())
             self.settings.setValue('api_key', self.apikey_input.text())
@@ -386,7 +346,6 @@ class MainWindow(QMainWindow):
         if not self.dir_input.text():
             QMessageBox.warning(self, "Validation Error", "Please select a save directory")
             return False
-        
         try:
             limit = int(self.limit_input.text() or '320')
             if limit < 1:
@@ -398,22 +357,17 @@ class MainWindow(QMainWindow):
         except ValueError:
             QMessageBox.warning(self, "Validation Error", "Please enter a valid number for download limit")
             return False
-            
         return True
 
     def start_download(self):
         if not self.validate_inputs():
             return
-            
         if self.remember_me.isChecked():
             self.save_settings()
-            
         settings_dict = self.create_settings_dict()
-        
         self.download_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.progress_display.clear()
-        
         self.download_thread = DownloaderThread(settings_dict)
         self.download_thread.progress_signal.connect(self.update_progress)
         self.download_thread.download_complete.connect(self.download_finished)
@@ -422,13 +376,7 @@ class MainWindow(QMainWindow):
 
     def stop_download(self):
         if self.download_thread and self.download_thread.isRunning():
-            reply = QMessageBox.question(
-                self,
-                'Confirmation',
-                'Are you sure you want to stop the download?',
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            
+            reply = QMessageBox.question(self, 'Confirmation', 'Are you sure you want to stop the download?', QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             if reply == QMessageBox.StandardButton.Yes:
                 self.download_thread.stop()
                 self.progress_display.append("\nStopping download...")
@@ -436,9 +384,7 @@ class MainWindow(QMainWindow):
 
     def update_progress(self, message):
         self.progress_display.append(message)
-        self.progress_display.verticalScrollBar().setValue(
-            self.progress_display.verticalScrollBar().maximum()
-        )
+        self.progress_display.verticalScrollBar().setValue(self.progress_display.verticalScrollBar().maximum())
 
     def download_finished(self):
         self.download_button.setEnabled(True)
@@ -452,13 +398,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         if self.download_thread and self.download_thread.isRunning():
-            reply = QMessageBox.question(
-                self,
-                'Confirmation',
-                'A download is in progress. Are you sure you want to quit?',
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            
+            reply = QMessageBox.question(self, 'Confirmation', 'A download is in progress. Are you sure you want to quit?', QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             if reply == QMessageBox.StandardButton.Yes:
                 self.download_thread.stop()
                 self.download_thread.wait()
@@ -469,11 +409,9 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    
     from PyQt6.QtGui import QFont
     font = QFont("Segoe UI", 9)
     app.setFont(font)
-    
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
