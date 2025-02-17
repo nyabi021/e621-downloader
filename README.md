@@ -25,7 +25,7 @@ A desktop application built with PyQt6 that allows users to download images from
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/nyabi021/e621-downloader.git
+git clone https://github.com/nyabi021/PawLoad.git
 cd e621-downloader
 ```
 
