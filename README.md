@@ -25,7 +25,7 @@ A desktop application built with PyQt6 that allows users to download images from
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/e621-downloader.git
+git clone https://github.com/nyabi021/e621-downloader.git
 cd e621-downloader
 ```
 
@@ -64,7 +64,7 @@ pip install pyinstaller
 
 2. Build the executable:
 ```bash
-pyinstaller --name="E621Downloader" --icon=icon.ico --windowed --onefile main.py
+pyinstaller --name="PawLoad" --icon=icon.ico --windowed --onefile main.py
 ```
 
 The executable will be created in the `dist` directory.
