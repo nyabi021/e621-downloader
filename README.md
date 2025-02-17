@@ -99,12 +99,6 @@ The application saves settings in the following locations:
 - SSL verification for all API requests
 - No plaintext password storage
 
-## Known Limitations
-
-- Maximum download limit of 10,000 images per session
-- Rate limiting according to e621.net's API guidelines
-- Downloads are sequential to respect server resources
-
 ## Contributing
 
 1. Fork the repository
