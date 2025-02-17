@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QTextEdit, QFileDialog, QMessageBox, QCheckBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
-from PyQt6.QtGui import QIntValidator
+from PyQt6.QtGui import QIntValidator, QPalette
 from pathlib import Path
 
 class DownloaderThread(QThread):
@@ -155,69 +155,161 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("e621-downloader v1.0.0")
         self.setMinimumSize(600, 400)
         self.settings = QSettings('e621-downloader', 'Settings')
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f5f5f5;
-            }
-            QLabel, QCheckBox {
-                font-size: 12px;
-                color: #333333;
-            }
-            QLineEdit {
-                padding: 8px;
-                border: 1px solid #cccccc;
-                border-radius: 4px;
-                background-color: white;
-                font-size: 12px;
-            }
-            QLineEdit:focus {
-                border: 1px solid #66afe9;
-            }
-            QPushButton {
-                padding: 8px 16px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                color: white;
-                background-color: #007bff;
-            }
-            QPushButton:hover {
-                background-color: #0056b3;
-            }
-            QPushButton:pressed {
-                background-color: #004085;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-            }
-            QPushButton#stopButton {
-                background-color: #6c757d;
-            }
-            QPushButton#stopButton:hover {
-                background-color: #5a6268;
-            }
-            QTextEdit {
-                border: 1px solid #cccccc;
-                border-radius: 4px;
-                background-color: white;
-                font-family: "Consolas", monospace;
-                font-size: 12px;
-                padding: 8px;
-            }
-        """)
+        
+        # 시스템 테마 감지
+        app = QApplication.instance()
+        self.is_dark_mode = app.palette().color(QPalette.ColorRole.Window).lightness() < 128
+        
+        # 테마에 따른 색상 설정
+        if self.is_dark_mode:
+            self.setStyleSheet("""
+                QMainWindow {
+                    background-color: #2b2b2b;
+                }
+                QLabel, QCheckBox {
+                    font-size: 12px;
+                    color: #ffffff;
+                }
+                QLineEdit {
+                    padding: 8px;
+                    border: 1px solid #555555;
+                    border-radius: 4px;
+                    background-color: #3b3b3b;
+                    color: #ffffff;
+                    font-size: 12px;
+                }
+                QLineEdit:focus {
+                    border: 1px solid #66afe9;
+                }
+                QPushButton {
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    color: white;
+                    background-color: #007bff;
+                }
+                QPushButton:hover {
+                    background-color: #0056b3;
+                }
+                QPushButton:pressed {
+                    background-color: #004085;
+                }
+                QPushButton:disabled {
+                    background-color: #4a4a4a;
+                    color: #8a8a8a;
+                }
+                QPushButton#stopButton {
+                    background-color: #6c757d;
+                }
+                QPushButton#stopButton:hover {
+                    background-color: #5a6268;
+                }
+                QPushButton#browseButton {
+                    background-color: #6c757d;
+                }
+                QPushButton#browseButton:hover {
+                    background-color: #5a6268;
+                }
+                QTextEdit {
+                    border: 1px solid #555555;
+                    border-radius: 4px;
+                    background-color: #3b3b3b;
+                    color: #ffffff;
+                    font-family: "Consolas", monospace;
+                    font-size: 12px;
+                    padding: 8px;
+                }
+                QMessageBox {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                }
+                QMessageBox QLabel {
+                    color: #ffffff;
+                }
+                QFileDialog {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                }
+            """)
+        else:
+            self.setStyleSheet("""
+                QMainWindow {
+                    background-color: #f5f5f5;
+                }
+                QLabel, QCheckBox {
+                    font-size: 12px;
+                    color: #333333;
+                }
+                QLineEdit {
+                    padding: 8px;
+                    border: 1px solid #cccccc;
+                    border-radius: 4px;
+                    background-color: white;
+                    font-size: 12px;
+                }
+                QLineEdit:focus {
+                    border: 1px solid #66afe9;
+                }
+                QPushButton {
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    color: white;
+                    background-color: #007bff;
+                }
+                QPushButton:hover {
+                    background-color: #0056b3;
+                }
+                QPushButton:pressed {
+                    background-color: #004085;
+                }
+                QPushButton:disabled {
+                    background-color: #cccccc;
+                }
+                QPushButton#stopButton {
+                    background-color: #6c757d;
+                }
+                QPushButton#stopButton:hover {
+                    background-color: #5a6268;
+                }
+                QPushButton#browseButton {
+                    background-color: #6c757d;
+                }
+                QPushButton#browseButton:hover {
+                    background-color: #5a6268;
+                }
+                QTextEdit {
+                    border: 1px solid #cccccc;
+                    border-radius: 4px;
+                    background-color: white;
+                    color: #333333;
+                    font-family: "Consolas", monospace;
+                    font-size: 12px;
+                    padding: 8px;
+                }
+            """)
+
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         layout = QVBoxLayout(main_widget)
         layout.setSpacing(15)
         layout.setContentsMargins(20, 20, 20, 20)
+
+        # Input layout setup
         input_layout = QVBoxLayout()
         input_layout.setSpacing(10)
+
+        # Username input
         username_layout = QVBoxLayout()
         username_label = QLabel("Username")
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("Enter your username")
         username_layout.addWidget(username_label)
         username_layout.addWidget(self.username_input)
+
+        # API key input
         apikey_layout = QVBoxLayout()
         apikey_label = QLabel("API Key")
         self.apikey_input = QLineEdit()
@@ -225,13 +317,19 @@ class MainWindow(QMainWindow):
         self.apikey_input.setEchoMode(QLineEdit.EchoMode.Password)
         apikey_layout.addWidget(apikey_label)
         apikey_layout.addWidget(self.apikey_input)
+
+        # Remember me checkbox
         self.remember_me = QCheckBox("Remember Me")
+
+        # Tags input
         tags_layout = QVBoxLayout()
         tags_label = QLabel("Tags")
         self.tags_input = QLineEdit()
         self.tags_input.setPlaceholderText("Enter tags (space separated)")
         tags_layout.addWidget(tags_label)
         tags_layout.addWidget(self.tags_input)
+
+        # Limit input
         limit_layout = QVBoxLayout()
         limit_label = QLabel("Maximum Images")
         self.limit_input = QLineEdit()
@@ -240,6 +338,8 @@ class MainWindow(QMainWindow):
         self.limit_input.setValidator(QIntValidator(1, 10000))
         limit_layout.addWidget(limit_label)
         limit_layout.addWidget(self.limit_input)
+
+        # Directory input
         dir_layout = QVBoxLayout()
         dir_label = QLabel("Save Directory")
         dir_input_layout = QHBoxLayout()
@@ -247,19 +347,13 @@ class MainWindow(QMainWindow):
         self.dir_input.setPlaceholderText("Select save directory")
         self.dir_button = QPushButton("Browse")
         self.dir_button.setObjectName("browseButton")
-        self.dir_button.setStyleSheet("""
-            QPushButton#browseButton {
-                background-color: #6c757d;
-            }
-            QPushButton#browseButton:hover {
-                background-color: #5a6268;
-            }
-        """)
         self.dir_button.clicked.connect(self.select_directory)
         dir_input_layout.addWidget(self.dir_input)
         dir_input_layout.addWidget(self.dir_button)
         dir_layout.addWidget(dir_label)
         dir_layout.addLayout(dir_input_layout)
+
+        # Add all input layouts
         input_layout.addLayout(username_layout)
         input_layout.addLayout(apikey_layout)
         input_layout.addWidget(self.remember_me)
@@ -267,10 +361,14 @@ class MainWindow(QMainWindow):
         input_layout.addLayout(limit_layout)
         input_layout.addLayout(dir_layout)
         layout.addLayout(input_layout)
+
+        # Progress display
         self.progress_display = QTextEdit()
         self.progress_display.setReadOnly(True)
         self.progress_display.setMinimumHeight(150)
         layout.addWidget(self.progress_display)
+
+        # Button layout
         button_layout = QHBoxLayout()
         self.download_button = QPushButton("Start Download")
         self.stop_button = QPushButton("Stop Download")
@@ -282,6 +380,8 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.download_button)
         button_layout.addWidget(self.stop_button)
         layout.addLayout(button_layout)
+
+        # Load saved settings
         self.load_settings()
         self.download_thread = None
 
@@ -376,7 +476,12 @@ class MainWindow(QMainWindow):
 
     def stop_download(self):
         if self.download_thread and self.download_thread.isRunning():
-            reply = QMessageBox.question(self, 'Confirmation', 'Are you sure you want to stop the download?', QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            reply = QMessageBox.question(
+                self, 
+                'Confirmation', 
+                'Are you sure you want to stop the download?', 
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
             if reply == QMessageBox.StandardButton.Yes:
                 self.download_thread.stop()
                 self.progress_display.append("\nStopping download...")
@@ -384,7 +489,9 @@ class MainWindow(QMainWindow):
 
     def update_progress(self, message):
         self.progress_display.append(message)
-        self.progress_display.verticalScrollBar().setValue(self.progress_display.verticalScrollBar().maximum())
+        self.progress_display.verticalScrollBar().setValue(
+            self.progress_display.verticalScrollBar().maximum()
+        )
 
     def download_finished(self):
         self.download_button.setEnabled(True)
@@ -398,7 +505,12 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         if self.download_thread and self.download_thread.isRunning():
-            reply = QMessageBox.question(self, 'Confirmation', 'A download is in progress. Are you sure you want to quit?', QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            reply = QMessageBox.question(
+                self, 
+                'Confirmation', 
+                'A download is in progress. Are you sure you want to quit?', 
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
             if reply == QMessageBox.StandardButton.Yes:
                 self.download_thread.stop()
                 self.download_thread.wait()
