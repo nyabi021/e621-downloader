@@ -4,10 +4,11 @@ import asyncio
 import aiohttp
 import ssl
 import base64
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                            QHBoxLayout, QLabel, QLineEdit, QPushButton, 
-                            QTextEdit, QFileDialog, QMessageBox,
-                            QCheckBox)
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, 
+    QHBoxLayout, QLabel, QLineEdit, QPushButton, 
+    QTextEdit, QFileDialog, QMessageBox, QCheckBox
+)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
 from PyQt6.QtGui import QIntValidator
 from pathlib import Path
@@ -39,15 +40,19 @@ class DownloaderThread(QThread):
             api_key = self.settings_dict['credentials']['api_key']
             
             headers = {
-                'User-Agent': 'E621Downloader/1.0 (by {})'.format(username),
+                'User-Agent': 'PawLoad/1.0 (by {})'.format(username),
                 'Authorization': f'Basic {self.encode_credentials(username, api_key)}'
             }
             
             connector = aiohttp.TCPConnector(ssl=ssl_context)
-            async with aiohttp.ClientSession(headers=headers, 
-                                           connector=connector,
-                                           timeout=timeout) as session:
-                self.progress_signal.emit(f"Attempting to login as {self.settings_dict['credentials']['username']}")
+            async with aiohttp.ClientSession(
+                headers=headers, 
+                connector=connector,
+                timeout=timeout
+            ) as session:
+                self.progress_signal.emit(
+                    f"Attempting to login as {self.settings_dict['credentials']['username']}"
+                )
                 try:
                     async with session.get('https://e621.net/posts.json?limit=1') as response:
                         if response.status == 200:
@@ -74,7 +79,7 @@ class DownloaderThread(QThread):
                 return
 
             headers = {
-                'User-Agent': 'E621Downloader/1.0'
+                'User-Agent': 'PawLoad/1.0'
             }
             auth = aiohttp.BasicAuth(
                 login=self.settings_dict['credentials']['username'],
@@ -91,7 +96,7 @@ class DownloaderThread(QThread):
 
                 self.progress_signal.emit(f"Fetching posts with tags: {tags}")
                 async with session.get(
-                    f'https://e621.net/posts.json',
+                    'https://e621.net/posts.json',
                     params={'tags': tags, 'limit': limit}
                 ) as response:
                     if response.status != 200:
@@ -156,10 +161,10 @@ class DownloaderThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("E621 Downloader")
+        self.setWindowTitle("PawLoad")
         self.setMinimumSize(600, 400)
         
-        self.settings = QSettings('E621Downloader', 'Settings')
+        self.settings = QSettings('PawLoad', 'Settings')
         
         self.setStyleSheet("""
             QMainWindow {
@@ -221,6 +226,7 @@ class MainWindow(QMainWindow):
         input_layout = QVBoxLayout()
         input_layout.setSpacing(10)
         
+        # Username section
         username_layout = QVBoxLayout()
         username_label = QLabel("Username")
         self.username_input = QLineEdit()
@@ -228,6 +234,7 @@ class MainWindow(QMainWindow):
         username_layout.addWidget(username_label)
         username_layout.addWidget(self.username_input)
         
+        # API Key section
         apikey_layout = QVBoxLayout()
         apikey_label = QLabel("API Key")
         self.apikey_input = QLineEdit()
@@ -238,6 +245,7 @@ class MainWindow(QMainWindow):
         
         self.remember_me = QCheckBox("Remember Me")
         
+        # Tags section
         tags_layout = QVBoxLayout()
         tags_label = QLabel("Tags")
         self.tags_input = QLineEdit()
@@ -245,15 +253,17 @@ class MainWindow(QMainWindow):
         tags_layout.addWidget(tags_label)
         tags_layout.addWidget(self.tags_input)
 
+        # Limit section
         limit_layout = QVBoxLayout()
         limit_label = QLabel("Maximum Images")
         self.limit_input = QLineEdit()
         self.limit_input.setPlaceholderText("Enter maximum number of images (default: 320)")
-        self.limit_input.setText("320")  
+        self.limit_input.setText("320")
         self.limit_input.setValidator(QIntValidator(1, 10000))
         limit_layout.addWidget(limit_label)
         limit_layout.addWidget(self.limit_input)
         
+        # Directory section
         dir_layout = QVBoxLayout()
         dir_label = QLabel("Save Directory")
         dir_input_layout = QHBoxLayout()
@@ -275,6 +285,7 @@ class MainWindow(QMainWindow):
         dir_layout.addWidget(dir_label)
         dir_layout.addLayout(dir_input_layout)
         
+        # Assemble input layout
         input_layout.addLayout(username_layout)
         input_layout.addLayout(apikey_layout)
         input_layout.addWidget(self.remember_me)
@@ -284,11 +295,13 @@ class MainWindow(QMainWindow):
         
         layout.addLayout(input_layout)
         
+        # Progress display
         self.progress_display = QTextEdit()
         self.progress_display.setReadOnly(True)
         self.progress_display.setMinimumHeight(150)
         layout.addWidget(self.progress_display)
         
+        # Buttons layout
         button_layout = QHBoxLayout()
         self.download_button = QPushButton("Start Download")
         self.stop_button = QPushButton("Stop Download")
@@ -304,6 +317,7 @@ class MainWindow(QMainWindow):
         
         layout.addLayout(button_layout)
         
+        # Load previous settings if any
         self.load_settings()
         
         self.download_thread = None
@@ -365,7 +379,7 @@ class MainWindow(QMainWindow):
             }
         }
 
-    def validate_inputs(self):  
+    def validate_inputs(self):
         if not self.tags_input.text():
             QMessageBox.warning(self, "Validation Error", "Please enter tags to search")
             return False
@@ -408,10 +422,12 @@ class MainWindow(QMainWindow):
 
     def stop_download(self):
         if self.download_thread and self.download_thread.isRunning():
-            reply = QMessageBox.question(self, 'Confirmation', 
-                                       'Are you sure you want to stop the download?',
-                                       QMessageBox.StandardButton.Yes | 
-                                       QMessageBox.StandardButton.No)
+            reply = QMessageBox.question(
+                self,
+                'Confirmation',
+                'Are you sure you want to stop the download?',
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
             
             if reply == QMessageBox.StandardButton.Yes:
                 self.download_thread.stop()
@@ -436,10 +452,12 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         if self.download_thread and self.download_thread.isRunning():
-            reply = QMessageBox.question(self, 'Confirmation', 
-                                       'A download is in progress. Are you sure you want to quit?',
-                                       QMessageBox.StandardButton.Yes | 
-                                       QMessageBox.StandardButton.No)
+            reply = QMessageBox.question(
+                self,
+                'Confirmation',
+                'A download is in progress. Are you sure you want to quit?',
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
             
             if reply == QMessageBox.StandardButton.Yes:
                 self.download_thread.stop()
