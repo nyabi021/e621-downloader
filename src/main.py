@@ -156,11 +156,9 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(600, 400)
         self.settings = QSettings('e621-downloader', 'Settings')
         
-        # 시스템 테마 감지
         app = QApplication.instance()
         self.is_dark_mode = app.palette().color(QPalette.ColorRole.Window).lightness() < 128
         
-        # 테마에 따른 색상 설정
         if self.is_dark_mode:
             self.setStyleSheet("""
                 QMainWindow {
@@ -297,11 +295,9 @@ class MainWindow(QMainWindow):
         layout.setSpacing(15)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Input layout setup
         input_layout = QVBoxLayout()
         input_layout.setSpacing(10)
 
-        # Username input
         username_layout = QVBoxLayout()
         username_label = QLabel("Username")
         self.username_input = QLineEdit()
@@ -309,7 +305,6 @@ class MainWindow(QMainWindow):
         username_layout.addWidget(username_label)
         username_layout.addWidget(self.username_input)
 
-        # API key input
         apikey_layout = QVBoxLayout()
         apikey_label = QLabel("API Key")
         self.apikey_input = QLineEdit()
@@ -318,10 +313,8 @@ class MainWindow(QMainWindow):
         apikey_layout.addWidget(apikey_label)
         apikey_layout.addWidget(self.apikey_input)
 
-        # Remember me checkbox
         self.remember_me = QCheckBox("Remember Me")
 
-        # Tags input
         tags_layout = QVBoxLayout()
         tags_label = QLabel("Tags")
         self.tags_input = QLineEdit()
@@ -329,7 +322,6 @@ class MainWindow(QMainWindow):
         tags_layout.addWidget(tags_label)
         tags_layout.addWidget(self.tags_input)
 
-        # Limit input
         limit_layout = QVBoxLayout()
         limit_label = QLabel("Maximum Images")
         self.limit_input = QLineEdit()
@@ -339,7 +331,6 @@ class MainWindow(QMainWindow):
         limit_layout.addWidget(limit_label)
         limit_layout.addWidget(self.limit_input)
 
-        # Directory input
         dir_layout = QVBoxLayout()
         dir_label = QLabel("Save Directory")
         dir_input_layout = QHBoxLayout()
@@ -353,7 +344,6 @@ class MainWindow(QMainWindow):
         dir_layout.addWidget(dir_label)
         dir_layout.addLayout(dir_input_layout)
 
-        # Add all input layouts
         input_layout.addLayout(username_layout)
         input_layout.addLayout(apikey_layout)
         input_layout.addWidget(self.remember_me)
@@ -362,13 +352,11 @@ class MainWindow(QMainWindow):
         input_layout.addLayout(dir_layout)
         layout.addLayout(input_layout)
 
-        # Progress display
         self.progress_display = QTextEdit()
         self.progress_display.setReadOnly(True)
         self.progress_display.setMinimumHeight(150)
         layout.addWidget(self.progress_display)
 
-        # Button layout
         button_layout = QHBoxLayout()
         self.download_button = QPushButton("Start Download")
         self.stop_button = QPushButton("Stop Download")
@@ -381,7 +369,6 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.stop_button)
         layout.addLayout(button_layout)
 
-        # Load saved settings
         self.load_settings()
         self.download_thread = None
 
